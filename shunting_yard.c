@@ -9,3 +9,7 @@ struct calculadora{
 struct pilha{
 
 };
+
+struct fila{
+
+};
