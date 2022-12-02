@@ -6,3 +6,6 @@ struct calculadora{
     int precedencia;
 };
 
+struct pilha{
+
+};
