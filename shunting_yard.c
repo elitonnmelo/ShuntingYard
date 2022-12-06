@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
+#include <limits.h>
 
 typedef struct calculadora{
     int numero;
@@ -24,49 +25,28 @@ typedef struct fila{
     unsigned int capacidade;
 } FilaCircularInt;
 
-Pilha *pilha_criar(){
-    Pilha *nova_pilha = (Pilha*) malloc(sizeof(Pilha));
 
-    nova_pilha->inicio = 0;
-    nova_pilha->fim = 0;
-
-    return nova_pilha;
-};
-
-bool push(Pilha *p, Calculadora c, FilaCircularInt *f){
-    if(c.precedencia == -1){
-        exit; //operando inválido
-    }else if(pilha_vazia(p)){
-        p->elementos[p->fim] = c;
-        p->fim++;
-    }else if(p->elementos[p->fim].precedencia > c.precedencia){
-        p->elementos[p->fim] = c;
-        p->fim++;
-    }else{
-        p->elementos[p->fim].tag = 1;
-        fila_circular_enfileirar(f, p->elementos[p->fim]);
-        pop(p);
-        p->elementos[p->fim] = c;
-        p->fim++;
+int calcula(int a, int b, char op){
+    if(op == '+'){
+        return a + b;
+    }else if(op == '-'){
+        return a - b;   
+    }else if(op == '/'){
+        return a / b;   
+    }else if(op == '*'){
+        return a * b;   
+    }else if(op == '^'){
+        return pow(a, b);   
+    }else if(op == 'm'){
+        return a % b;   
+    }else if(op == 'l'){
+        return log10(a);  
+    }
+    else{
+        return INT_MAX;
     }
 }
 
-bool pilha_vazia(Pilha *p){
-    return p->fim == 0;
-};
-
-bool pop(Pilha *p){
-    if(pilha_vazia(p))
-        return false;
-    else{
-        p->fim--;
-        return true;
-    }
-};
-
-void pilha_libera(Pilha *p){
-    free(p);
-};
 
 FilaCircularInt *fila_circular_criar(unsigned int capacidade) {
     FilaCircularInt *nova_fila = malloc(sizeof(FilaCircularInt));
@@ -75,6 +55,8 @@ FilaCircularInt *fila_circular_criar(unsigned int capacidade) {
     nova_fila->capacidade = capacidade;
     nova_fila->inicio = 0;
     nova_fila->fim = 0;
+
+    return nova_fila;
 }
 
 void fila_circular_devolver(FilaCircularInt *fila) {
@@ -106,39 +88,108 @@ bool fila_circular_enfileirar(FilaCircularInt *fila, struct calculadora c) {
 }
 
 // esta função não serve para informar quem foi removido
-bool fila_circular_desenfileirar(FilaCircularInt *fila, Pilha p) {
-    if(fila_circular_vazia(fila)) {
+bool fila_circular_desenfileirar(FilaCircularInt *f) {
+    if(fila_circular_vazia(f)) {
         return false;
     }
 
     int *a;
     int i = 0;
 
-    while(fila->elementos[fila->inicio].tag == 0){
-        a[i] = fila->elementos[fila->inicio].numero;
-        fila->inicio = (fila->inicio + 1) % fila->capacidade;
+    Calculadora aux;
+    char b;
+    
+    while(f->elementos[i].tag != 1 ){
         i++;
     }
 
-    char b;
-    if(fila->elementos[fila->inicio].tag == 1){
-        b = fila->elementos[fila->inicio].operando;
-        fila->inicio = (fila->inicio + 1) % fila->capacidade;
-    }
-    
-    Calculadora aux;
+    b = f->elementos[i].operando;
+    i = 0;
 
-    if(i == 1){
+    if(b == 'l'){
+        a[0] = f->elementos[f->inicio].numero; 
         aux.numero = calcula(a[0], 10, b);
         aux.tag = 0;
-    }else if(i == 2){
+        f->inicio = (f->inicio + 1) % f->capacidade;
+        f->inicio = (f->inicio + 1) % f->capacidade;
+    }
+    else{
+        a[0] = f->elementos[f->inicio].numero;
+        a[1] = f->elementos[f->inicio + 1].numero; //revisar se f->inicio + 1 ta certo.
         aux.numero = calcula(a[0], a[1], b);
         aux.tag = 0;
-    }else{
-        exit; //equação inválida
+        f->inicio = (f->inicio + 1) % f->capacidade;
+        f->inicio = (f->inicio + 1) % f->capacidade;
+        f->inicio = (f->inicio + 1) % f->capacidade;
     }
 
-    fila_circular_enfileirar(fila, aux);
+    fila_circular_enfileirar(f, aux);
+    return true;
+}
+
+int retornar_elementos_fila(FilaCircularInt *f){
+    return f->elementos[f->fim].numero;
+}
+Pilha *pilha_criar(){
+    Pilha *nova_pilha = (Pilha*) malloc(sizeof(Pilha));
+
+    nova_pilha->inicio = 0;
+    nova_pilha->fim = 0;
+
+    return nova_pilha;
+}
+
+bool pilha_vazia(Pilha *p){
+    return p->fim == 0;
+}
+
+bool pop(Pilha *p, FilaCircularInt *f){
+    if(pilha_vazia(p))
+        return false;
+    else{
+        fila_circular_enfileirar(f, p->elementos[p->fim]);
+        p->fim--;
+        return true;
+    }
+}
+
+
+bool push(Pilha *p, Calculadora c, FilaCircularInt *f){
+    if(c.precedencia == -1){
+        return false;
+    }else if(pilha_vazia(p)){
+        p->elementos[p->fim] = c;
+        p->fim++;
+        return true;
+    }else if(p->elementos[p->fim].precedencia > c.precedencia){
+        p->elementos[p->fim] = c;
+        p->fim++;
+        return true;
+    }
+    else if(c.operando == ')'){
+        while(p->elementos[p->fim].operando != '('){
+            p->elementos[p->fim].tag = 1;
+            pop(p, f);
+        }
+        p->fim--;
+        return true;
+    }
+    else{
+       while (p->elementos[p->fim].precedencia <= c.precedencia){
+            p->elementos[p->fim].tag = 1;
+            pop(p, f);
+       }
+        p->elementos[p->fim] = c;
+        p->fim++;
+        return true;
+       
+    }
+}
+
+
+
+void pilha_libera(Pilha *p){
+    free(p);
 }
 
 void criar_precedencia(struct calculadora c){
@@ -155,25 +206,7 @@ void criar_precedencia(struct calculadora c){
     }
 }
 
-int calcula(int a, int b, char op){
-    if(op == '+'){
-        return a + b;
-    }else if(op == '-'){
-        return a - b;   
-    }else if(op == '/'){
-        return a / b;   
-    }else if(op == '*'){
-        return a * b;   
-    }else if(op == '^'){
-        return pow(a, b);   
-    }else if(op == 'm'){
-        return a % b;   
-    }else if(op == 'l'){
-        return log10(a);  
-    }else{
-        exit;
-    }
-}
+
 
 
 int main(){
@@ -181,13 +214,36 @@ int main(){
     Pilha *p = pilha_criar();
     FilaCircularInt *f =  fila_circular_criar(100);
     
-    int aux;
+    char aux;
+    Calculadora *vet;
+    int i = 0;
     while(aux != '\n'){
         scanf("%c", &aux);
-        if(aux >= 0){
-
+        if(i %2 == 0){
+            vet[i].tag = 0;
+            vet[i].numero = (int) aux;
+            fila_circular_enfileirar(f, vet[i]);
         }
+
+        else{
+            vet[i].tag = 1;
+            vet[i].operando = aux;
+            push(p, vet[i], f);
+        }
+        i++;
+
     }
+    while (pilha_vazia(p)){
+        pop(p, f);
+    }
+    while(f->fim != 1){
+        fila_circular_desenfileirar(f);
+    }
+    printf("%d", retornar_elementos_fila(f));
+    fila_circular_devolver(f);
+    pilha_libera(p);
+    
+    
     
 }
 
