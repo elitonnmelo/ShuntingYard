@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <math.h>
 #include <limits.h>
+#include <string.h>
 typedef struct calculadora{
     int numero;
     char operando;
@@ -195,29 +196,41 @@ void criar_precedencia(struct calculadora c){
     }
 }
 
+void remove_espaco(char vet[], int n){
+    for(int i = 0; i < n; i++){
+        if(vet[i] == ' '){
+            for(int j = i; j < n; j++){
+                vet[j] = vet[j + 1];
+            }
+            n--;
+            i--;
+        }
+    }
+}
+
 int main(){
 
     Pilha *p = pilha_criar();
     FilaCircularInt *f =  fila_circular_criar(100);
     
-    char aux = 1; // só para não armazenar lixo, já que será substituído depois
-    Calculadora *vet;
-    int i = 0;
+    char str[100];
+    scanf("%[^\n]", str);
+    int tam = strlen(str);
+    Calculadora aux;
+    
+    remove_espaco(str, tam);
 
-    while(aux != '\n'){
-        scanf("%c", &aux);
-        if(i %2 == 0){
-            vet[i].tag = 0;
-            vet[i].numero = (int) aux;
-            fila_circular_enfileirar(f, vet[i]);
+    for(int i = 0; i < tam; i++){
+        if(i % 2 == 0){
+            aux.tag = 0;
+            aux.numero = (int) str[i];
+            fila_circular_enfileirar(f, aux);
+        }else{
+            aux.tag = 1;
+            aux.operando = str[i];
+            criar_precedencia(aux);
+            push(p, aux, f);
         }
-
-        else{
-            vet[i].tag = 1;
-            vet[i].operando = aux;
-            push(p, vet[i], f);
-        }
-        i++;
     }
 
     while (pilha_vazia(p) == false){
@@ -237,3 +250,22 @@ int main(){
 
 
 
+/*char aux = 1; // só para não armazenar lixo, já que será substituído depois
+    Calculadora *vet;
+    int i = 0;
+
+    while(aux != '\n'){
+        scanf("%c", &aux);
+        if(i %2 == 0){
+            vet[i].tag = 0;
+            vet[i].numero = (int) aux;
+            fila_circular_enfileirar(f, vet[i]);
+        }
+
+        else{
+            vet[i].tag = 1;
+            vet[i].operando = aux;
+            push(p, vet[i], f);
+        }
+        i++;
+    }*/
