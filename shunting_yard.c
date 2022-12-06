@@ -111,7 +111,7 @@ bool fila_circular_desenfileirar(FilaCircularInt *f) {
         aux.numero = calcula(a[0], 10, b);
         aux.tag = 0;
         f->inicio = (f->inicio + 1) % f->capacidade;
-        f->inicio = (f->inicio + 1) % f->capacidade;
+        f->elementos[f->inicio] = aux; // o elemento deve continuar no começo da fila
     }
     else{
         a[0] = f->elementos[f->inicio].numero;
@@ -120,10 +120,9 @@ bool fila_circular_desenfileirar(FilaCircularInt *f) {
         aux.tag = 0;
         f->inicio = (f->inicio + 1) % f->capacidade;
         f->inicio = (f->inicio + 1) % f->capacidade;
-        f->inicio = (f->inicio + 1) % f->capacidade;
+        f->elementos[f->inicio] = aux; // o elemento deve continuar no começo da fila
     }
 
-    fila_circular_enfileirar(f, aux);
     return true;
 }
 
