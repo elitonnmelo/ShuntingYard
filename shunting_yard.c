@@ -16,13 +16,27 @@ typedef struct pilha{
     int fim;
     struct calculadora *elementos;
 }Pilha;
+typedef struct no{
+    Calculadora elemento;
+    struct no *proximo;
+    struct no *anterior;
+}No;
 
 typedef struct fila{
     struct calculadora *elementos;
-    unsigned int inicio;
-    unsigned int fim;
-    unsigned int capacidade;
+    No *primeiro;
 } FilaCircularInt;
+
+No *no_enc_criar(Calculadora elemento) {
+  No *novo_no = malloc(sizeof(struct no));
+
+  novo_no->elemento = elemento;
+  novo_no->proximo = NULL;
+
+  return novo_no;
+}
+
+void no_enc_apagar(No *no) { free(no); }
 
 int calcula(int a, int b, char op){
     if(op == '+'){
@@ -44,13 +58,11 @@ int calcula(int a, int b, char op){
     }
 }
 
-FilaCircularInt *fila_circular_criar(unsigned int capacidade) {
-    FilaCircularInt *nova_fila = malloc(sizeof(FilaCircularInt));
+FilaCircularInt *fila_circular_criar() {
+    FilaCircularInt *nova_fila = malloc(sizeof(struct fila));
 
-    nova_fila->elementos = malloc(sizeof(int)*capacidade);
-    nova_fila->capacidade = capacidade;
-    nova_fila->inicio = 0;
-    nova_fila->fim = 0;
+    nova_fila->primeiro = NULL;
+    nova_fila->elementos = malloc(sizeof(struct calculadora)*100);
 
     return nova_fila;
 }
@@ -61,25 +73,25 @@ void fila_circular_devolver(FilaCircularInt *fila) {
     free(fila);
 }
 
-bool fila_circular_cheia(FilaCircularInt *fila) {
-    unsigned int novo_fim = (fila->fim + 1) % fila->capacidade;
-
-    return fila->inicio == novo_fim;
-}
-
 bool fila_circular_vazia(FilaCircularInt *fila) {
-    return fila->inicio == fila->fim;
+    return fila->primeiro == NULL;
 }
 
-bool fila_circular_enfileirar(FilaCircularInt *fila, struct calculadora c) {
-    if(fila_circular_cheia(fila)) {
-        return false;
+bool fila_circular_enfileirar(FilaCircularInt *fila, struct calculadora c){
+
+    if(fila_circular_vazia(fila)) {
+        fila->primeiro->elemento = c;
+        fila->primeiro->proximo = NULL;
+        return true;
+    }else{
+        No *atual = fila->primeiro;
+        while(atual->proximo != NULL){
+            atual = atual->proximo;
+        }
+
+        atual->elemento = c;
+        atual->proximo = NULL;
     }
-
-    // fim marca a posição onde inserir
-    fila->elementos[fila->fim] = c;
-    fila->fim = (fila->fim + 1) % fila->capacidade;
-
     return true;
 }
 
@@ -89,6 +101,33 @@ bool fila_circular_desenfileirar(FilaCircularInt *f) {
         return false;
     }
 
+    No *atual = f->primeiro;
+    char aux_char;
+    int a[2];
+    Calculadora aux;
+
+    while(atual->proximo != NULL && atual->elemento.tag != 1){
+        atual = atual->proximo;
+    }// depois disso atual está no operando
+
+    aux_char = atual->elemento.operando; // operando
+    a[1] = atual->anterior->elemento.numero; //numero antes dele
+    a[0] = atual->anterior->anterior->elemento.numero; //numero dois antes dele
+
+    aux.numero = calcula(a[0], a[1], aux_char);
+    aux.tag = 0;
+
+    No *aux_no;
+    aux_no->elemento = aux; //resultado da operação 
+    aux_no->proximo = atual->proximo; //número depois do operando
+    
+    atual = atual->anterior->anterior;
+    atual = aux_no;
+
+    return true;
+}
+
+/*
     int *a;
     int i = 0;
 
@@ -117,12 +156,14 @@ bool fila_circular_desenfileirar(FilaCircularInt *f) {
         f->inicio = (f->inicio + 1) % f->capacidade;
         f->elementos[f->inicio] = aux; // o elemento deve continuar no começo da fila
     }
-
-    return true;
-}
+*/
 
 int retornar_elementos_fila(FilaCircularInt *f){
-    return f->elementos[f->fim].numero;
+    if(f->primeiro != NULL){
+        return f->primeiro->elemento.numero;
+    }else{
+        return INT_MAX;
+    }
 }
 
 Pilha *pilha_criar(){
@@ -155,12 +196,11 @@ bool push(Pilha *p, Calculadora c, FilaCircularInt *f){
         p->elementos[p->fim] = c;
         p->fim++;
         return true;
-    }else if(p->elementos[p->fim].precedencia > c.precedencia){
+    }else if(p->elementos[p->fim].precedencia < c.precedencia){
         p->elementos[p->fim] = c;
         p->fim++;
         return true;
-    }
-    else if(c.operando == ')'){
+    }else if(c.operando == ')'){
         while(p->elementos[p->fim].operando != '('){
             p->elementos[p->fim].tag = 1;
             pop(p, f);
@@ -168,7 +208,7 @@ bool push(Pilha *p, Calculadora c, FilaCircularInt *f){
         p->fim--;
         return true;
     }else{
-       while(p->elementos[p->fim].precedencia <= c.precedencia){
+       while(p->elementos[p->fim].precedencia > c.precedencia){
             p->elementos[p->fim].tag = 1;
             pop(p, f);
         }
@@ -196,49 +236,58 @@ void criar_precedencia(struct calculadora c){
     }
 }
 
-void remove_espaco(char vet[], int n){
-    for(int i = 0; i < n; i++){
-        if(vet[i] == ' '){
-            for(int j = i; j < n; j++){
-                vet[j] = vet[j + 1];
-            }
-            n--;
-            i--;
+int fila_circular_qnt_elementos(FilaCircularInt *f){
+    int qnt = 0;
+    No *atual;
+
+    if(f->primeiro == NULL){
+        return 0;
+    }else{
+        atual = f->primeiro;
+        while(atual->proximo != NULL){
+            atual = atual->proximo;
+            qnt++;
         }
+        return qnt;
     }
 }
 
 int main(){
-
+    Calculadora aux;
     Pilha *p = pilha_criar();
-    FilaCircularInt *f =  fila_circular_criar(100);
+    FilaCircularInt *f =  fila_circular_criar();
     
     char str[100];
+    char *pt;
     scanf("%[^\n]", str);
-    int tam = strlen(str);
-    Calculadora aux;
+    pt = strtok(str, " ");
     
-    remove_espaco(str, tam);
-
-    for(int i = 0; i < tam; i++){
-        if(i % 2 == 0){
-            aux.tag = 0;
-            aux.numero = (int) str[i];
-            fila_circular_enfileirar(f, aux);
-        }else{
+    while(pt){
+        if(pt == '+' || pt == '-' || pt == '*' || pt == '/' || pt == 'l' || pt == 'm' || pt == '^' || pt == ')' || pt == '('){
+            aux.operando = pt;
             aux.tag = 1;
-            aux.operando = str[i];
             criar_precedencia(aux);
             push(p, aux, f);
+        }else{
+            aux.numero = strtol(pt, NULL, 10);
+            aux.tag = 0;
+            fila_circular_enfileirar(f, aux);
         }
+        pt = strtok(NULL, " ");
     }
-
-    while (pilha_vazia(p) == false){
+    
+    while(pilha_vazia(p) == false){
         pop(p, f);
     }
+    
+    No *atual;
+    if(f->primeiro != NULL){
+        atual = f->primeiro;
+    }
 
-    while(f->fim != 1){
+    while(atual->proximo != NULL && fila_circular_qnt_elementos(f) > 1){
         fila_circular_desenfileirar(f);
+        atual = atual->proximo;
     }
 
     printf("%d", retornar_elementos_fila(f));
@@ -247,8 +296,6 @@ int main(){
 
     return 0;
 }
-
-
 
 /*char aux = 1; // só para não armazenar lixo, já que será substituído depois
     Calculadora *vet;
